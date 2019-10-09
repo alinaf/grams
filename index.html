@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- basic script -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser.js"></script>
+</head>
+<body>
+
+  <script>
+    const words = new Set(["honeypot", "neophyte", "phenotype", "eyeteeth", "eyetooth", "honey", "hooey", "hoppy", "hype", "hyphen", "hypo", "netty", "penny", "peony", "peppy", "petty", "peyote", "phony", "phooey", "pony", "poppy", "potty", "python", "teeny", "they", "tony", "toothy", "type", "typhoon", "typo", "yente", "yoohoo"]);
+
+    var letters = ["n", "t", "p", "e", "y", "o", "h", "←","↻ "]; // first letter 
+    var freeLetters = ["h", "o", "n", "e","p", "t"];
+    var string = "";
+    var wordBankwords = ""; // hacky
+    var submitted = new Set([]);
+
+    var shakeCamera;
+    var graphics;
+
+    var config = {
+      type: Phaser.WEBGL,
+      width: 1000,
+      height: 1000,
+      backgroundColor: "FFFFFF",
+
+      scene: {
+        preload: preload,
+        create: create,
+         extend: {
+            check: check
+        }
+      }
+    };
+
+    var game = new Phaser.Game(config);
+    var squares = [];
+    var textBoxes = [];
+    var currentWord;
+    var camera;
+    var score = 0;
+    var scoreText;
+    var rankText;
+
+    var bonus;
+    var bankHeight = 50;
+    var bankWidth = 670;
+    var bank;
+    var highlight;
+
+    function preload ()
+    {
+     this.load.image('square', 'assets/square.png');
+     this.load.image('submit', 'assets/submit.png');
+     this.load.image('highlight', 'assets/highlight.png');
+   }
+
+   function create ()
+   {
+
+    highlight = this.add.sprite(285, 648, 'highlight');
+
+    bank = this.add.text(bankWidth, bankHeight, wordBankwords, { font: "30px Karla", fill: '#000000'});
+    camera = this.cameras.main;
+    currentWord = this.add.text(405, 85, "", { font: "70px Karla", fill: '#000000' });
+    currentWord.setOrigin(0.5);
+
+    const submit = this.add.sprite(400, 515, 'submit');
+    submit.setInteractive();
+
+    submit.on('pointerup', function() {
+      if(string.length > 0){
+        check();
+      }
+    });
+
+    bonus = this.add.text(405, 20, "", { font: "30px Karla", fill: '#000000'});
+    bonus.setOrigin(0.5);
+    scoreText = this.add.text(250, 560, "score: 0", { font: "25px Karla", fill: '#000000'});
+    rankText = this.add.text(250, 590, "rank: beginner", { font: "25px Karla", fill: '#000000'});
+    rankString = "beginner・good start・solid\n nice・great・amazing・genius";
+    var ranks = this.add.text(250, 635, rankString, { font: "18px Karla", fill: '#000000'});
+
+    // make grid
+    var width = 300;
+    var height = 100; 
+    for(i = 0; i < 9; i++){
+      var image = 'square';
+      if(i % 3 == 0) {
+        width = 300;
+        height += 105;
+      }
+      else {
+        width += 105;
+      }
+      const square = this.add.sprite(width, height, image);
+      square.tint = 0xE0E0E0;
+
+      if(i == 4) { // special square
+        square.tint = 0xF5C50B;
+      }
+      if(i == 7 || i == 8) { // oh my hacky but necessary
+        text = this.add.text(square.x - 25, square.y - 30, letters[i], { font: "55px Karla", fill: '#000000' });
+      }
+      else {
+        text = this.add.text(square.x - 15, square.y - 30, letters[i], { font: "55px Karla", fill: '#000000' });
+      }
+      textBoxes.push(text);
+      square.setInteractive();
+      squares.push(square);
+    }
+    // avert ur eyes, so dumb but i'm in a rush, will fix later
+    // loop doesn't work because it looks up last value of i when it calls the function
+    squares[0].on('pointerup', function() {
+      enterLetter(0);
+    });
+    squares[1].on('pointerup', function() {
+      enterLetter(1);
+    });
+    squares[2].on('pointerup', function() {
+      enterLetter(2);
+    });
+    squares[3].on('pointerup', function() {
+      enterLetter(3);
+    });
+    squares[4].on('pointerup', function() {
+      enterLetter(4);
+    });
+    squares[5].on('pointerup', function() {
+      enterLetter(5);
+    });
+    squares[6].on('pointerup', function() {
+      enterLetter(6);
+    });
+    squares[7].on('pointerup', function() {
+      enterLetter(7);
+    });
+    squares[8].on('pointerup', function() {
+      enterLetter(8);
+    });
+  }
+
+  function enterLetter(i) {
+    if(i == 7) {
+      back();
+    }
+    else if (i == 8) {
+      shuffle();
+    }
+    else {
+      addLetter(letters[i]);
+    }
+  }
+
+  function back() {
+    string = string.slice(0, -1);
+    currentWord.setText(string);
+  }
+
+  function shuffle() {
+    Phaser.Utils.Array.Shuffle(freeLetters);
+    // what a mess
+    for(i = 0; i < 4; i++) {
+      letters[i] = freeLetters[i];
+    }
+    for(i = 5; i < 7; i++) {
+      letters[i] = freeLetters[i-1]
+    }
+    for(i = 0; i < textBoxes.length; i++) {
+      textBoxes[i].setText(letters[i]);
+    }
+  }
+
+  function addLetter(letter) {
+    string += letter;
+    currentWord.setText(string);
+  }
+
+
+  async function check ()
+  {
+    var bad = false;
+    var message = "";
+    if(string.length <= 3) {
+      message = "too short";
+      bad = true;
+    }
+
+    else if(!string.includes(letters[4])) {
+      message = "missing " + "'" + letters[4] + "'";
+      bad = true;
+    }
+
+    else if (!words.has(string)) {
+      message = "invalid word";
+      bad = true;
+    }
+
+    else if (submitted.has(string)) {
+      message = "already used";
+      bad = true;
+    }
+
+    if (bad) {
+      currentWord.setText(message);
+      camera.shake(1000, 0.003);
+      await sleep(1000);
+      currentWord.setText(string);
+      return;
+    }
+    else {
+      submitted.add(string);
+      currentWord.fill = '0xF5C50B';
+      var bonusScore = calculateBonus(string);
+      if(isPangram(string)) {
+        bonusScore += 7;
+        bonus.setText("Pangram! +" + bonusScore + "!");
+
+      }
+      else {
+        bonus.setText("+" + bonusScore + "!");
+      }
+      bonus.visible = true;
+      score += bonusScore;
+      scoreText.setText("score: " + score);
+      var rank = calculateRank();
+      rankText.setText("rank: " + rank);
+      await sleep(600);
+      bonus.visible = false;
+      wordBankwords += ("\n" + string);
+      bank.setText(wordBankwords);
+      string = "";
+      currentWord.setText(string);
+    }
+  }
+
+  function calculateRank() {
+    // total possible = 156
+    if(score < 2) {
+      highlight.x = 285;
+      highlight.y = 648;
+      return "beginner";
+    }
+     if(score < 15) {
+      highlight.x = 380;
+      highlight.y = 648;
+      return "good start";
+    }
+     if(score < 20) {
+      highlight.x = 465;
+      highlight.y = 648;
+      return "solid";
+    }
+     if(score < 33) {
+      highlight.x = 275;
+      highlight.y = 668;
+      return "nice";
+    }
+     if(score < 40) {
+      highlight.x = 325;
+      highlight.y = 668;
+      return "great";
+    }
+     if(score < 55) {
+      highlight.x = 400;
+      highlight.y = 668;
+      return "amazing";
+    }
+     if(score < 78) {
+      highlight.x = 485;
+      highlight.y = 668;
+      return "genius";
+    }
+  }
+
+  function calculateBonus(word) {
+    if(word.length == 4) {
+      return 1;
+    }
+
+    return word.length;
+  }
+
+  function isPangram(word) {
+    for(i = 0; i < letters.length - 2; i++) {
+      if(!word.includes(letters[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+
+
+</script>
+
+</body>
+</html>
