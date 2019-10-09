@@ -10,10 +10,12 @@
     const brightBlue = "#459ac4";
     var currentWord = "";
     var wordStrings = [];
+    var letterMap = new Map();
+    var currentSquares = [];
 
     // demo 1: rat + star + cake
     // demo 2: rat + star + rackets
-    var letterBag = ["R", "T", "A", "S", "K", "A", "E", "C"];
+    var letterBag = ["r", "t", "a", "s", "k", "a", "e", "c"];
     var pos = 0; // no queue in JS apparently so just use this
  
     var usedWords = new Set([]); // you can have repeats so not quite
@@ -22,74 +24,60 @@
     // shake
     // var shakeCamera;
 
-    var currHeight = 500;
+    var currHeight = 300;
     var left = true;
 
     var config = {
       type: Phaser.WEBGL,
-      width: 1200,
+      width: 1400,
       height: 750,
       backgroundColor: "#d3e8e8",
 
       scene: {
         preload: preload,
         create: create,
-         extend: {
-            addWord: addWord
-        }
+        // update: update,
       }
     };
 
     var game = new Phaser.Game(config);
     var squares = [];
     var textBoxes = [];
-    var currentWord;
+    var currentWordText;
     var camera;
     var score = 0;
     var scoreText;
-    var rankText;
+    //var rankText;
 
-    var bonus;
-    var bankHeight = 50;
-    var bankWidth = 670;
-    var bank;
-    var highlight;
+    // var bonus;
+    // var bankHeight = 50;
+    // var bankWidth = 670;
+    // var bank;
+    // var highlight;
 
     function preload ()
     {
-     this.load.image('square', 'assets/square.png');
-     this.load.image('submit', 'assets/submit.png');
-     this.load.image('highlight', 'assets/highlight.png');
+    this.load.image('square', 'assets/square.png');
+    this.load.image('submit', 'assets/submit.png');
+    this.load.audio('music', 'assets/whatsleft.mp3');
    }
 
    function create ()
    {
+    camera = this.cameras.main;
+    currentWordText = this.add.text(700, 650, "", { font: "70px Karla", fill: '#000000' });
+    currentWordText.setOrigin(0.5);
+    scoreText = this.add.text(700, 700, "score: 0", { font: "25px Karla", fill: '#000000'});
+    const music = this.sound.add('music');
+    music.setLoop(true);
+    music.play();
 
-    //highlight = this.add.sprite(285, 648, 'highlight');
-
-    //bank = this.add.text(bankWidth, bankHeight, wordBankwords, { font: "30px Karla", fill: '#000000'});
-    //camera = this.cameras.main;
-    currentWord = this.add.text(405, 85, "", { font: "70px Karla", fill: '#000000' });
-    currentWord.setOrigin(0.5);
-
-    addWord(this, "hi");
-    addWord(this, "bye");
-        addWord(this, "hi");
-
+    this.input.keyboard.on('keydown_ENTER', submitWord);
+    this.input.keyboard.on('keydown_BACKSPACE', deleteLetter);
 
 
-    //const submit = this.add.sprite(400, 515, 'submit');
-    //submit.setInteractive();
 
-    // submit.on('pointerup', function() {
-    //   if(string.length > 0){
-    //     check();
-    //   }
-    // });
-
-    // bonus = this.add.text(405, 20, "", { font: "30px Karla", fill: '#000000'});
-    // bonus.setOrigin(0.5);
-    scoreText = this.add.text(250, 700, "score: 0", { font: "25px Karla", fill: '#000000'});
+    // might add
     //rankText = this.add.text(250, 590, "rank: beginner", { font: "25px Karla", fill: '#000000'});
    // rankString = "beginner・good start・solid\n nice・great・amazing・genius";
    // var ranks = this.add.text(250, 635, rankString, { font: "18px Karla", fill: '#000000'});
@@ -106,27 +94,93 @@
 
       textBoxes.push(text);
       square.setInteractive();
+      text.visible = false;
+      square.visible = false;
+      letterMap.set(square, letterBag[i]);
+      square.on('pointerover', function(pointer) {
+        this.setTint(0x054f4a);
+      });
+      square.on('pointerout', function(pointer) {
+        this.setTint(0x459ac4);
+      });
+      square.on('pointerup', function(pointer) {
+        updateString(this, letterMap.get(this));
+      });
+
       squares.push(square);
     }
+    drawTile();
+    drawTile();
+    drawTile();
+    drawTile();
+
+  }
+
+  function submitWord() {
+    // if(!validWord) {
+      camera.shake(700, 0.003);
+      currentWord = "";
+      currentSquares = [];
+      currentWordText.setText(currentWord);
+    // }
+}
+
+  function deleteLetter() {
+    if(!currentWord.length) return;
+    currentWord = currentWord.slice(0, -1);
+    currentWordText.setText(currentWord);
+    console.log(currentSquares);
+    currentSquares.pop();
+    console.log(currentSquares);
+}
+
+  function updateString(square, letter) {
+    if(currentSquares.includes(square)) {
+      camera.shake(500, 0.003);
+      return;
+    }
+    currentSquares.push(square);
+    currentWord += letter;
+    currentWordText.setText(currentWord);
+    // only use one letter once
+    // only use letters from one word or center tiles
+  }
+
+
+
+  function drawTile() {
+    squares[pos].visible = true;
+    textBoxes[pos].visible = true;
+    pos++;
+    // oof rearranging will be tough
   }
 
   function addWord(context, word) {
-    var width = left? 0 : 500;
+    var width = left? 0 : 750;
     left = !left;
     for(i = 0; i < word.length; i++){
         width += 90;
       
       const square = context.add.sprite(width, currHeight, 'square');
       square.tint = 0x459ac4;
+        square.on('pointerover', function(pointer) {
+        this.setTint(0x054f4a);
+      });
+      square.on('pointerout', function(pointer) {
+        this.setTint(0x459ac4);
+      });
+      square.on('pointerup', function(pointer) {
+        console.log("click");
+      });
 
-      console.log(width);
+
       text = context.add.text(square.x - 18, square.y - 33, word[i], { font: "60px Karla", fill: '#FFFFFF' });
 
       // textBoxes.push(text);
-      // square.setInteractive();
+       square.setInteractive();
       // squares.push(square);
     }
-    if(left) currHeight += 100; // every other time
+    if(left) currHeight += 120; // every other time
   }
     // avert ur eyes, so dumb but i'm in a rush, will fix later
     // loop doesn't work because it looks up last value of i when it calls the function
@@ -312,6 +366,27 @@
   // function sleep(ms) {
   //   return new Promise(resolve => setTimeout(resolve, ms));
   // }
+
+       // function update() {
+        //console.log('hi');
+      //   if (!gameState.active) {
+      //    if (gameState.cursors.space.isDown) {
+      //      gameState.score = 0;
+      //      gameState.active = true;
+      //      this.scene.restart();
+      //    }
+      //  }
+
+
+      //  if (gameState.cursors.left.isDown) {
+      //   gameState.player.setVelocityX(gameState.playerVelocity * -1);
+      // } else if (gameState.cursors.right.isDown) {
+      //   gameState.player.setVelocityX(gameState.playerVelocity);
+      // } 
+      // else {
+      //   gameState.player.setVelocityX(0);
+      // }
+    // }
 
 
 
