@@ -20,8 +20,10 @@
     var letterBag = ["r", "t", "a", "s", "k", "a", "e", "c"];
     var pos = 0; // no queue in JS apparently so just use this
 
-    var validWords = new Set(["rat", "art", "tar", "task", "star", "rackets", "cake", "cakes"]);
-    var plurals = new Set(["rats"]); // doesn't actually work because each word needs its own memory
+    var validWords = new Set(["rat", "rats", "art", "tar", "task", "star", "cars",
+     "carts", "rackets", "cake", "cakes", "restack", "casket", "creaks", "racket",
+     "tracks", "karates", "takers", "karats", "skater"]);
+    var plurals = new Set(); // doesn't actually work because each word needs its own memory
     // put "s" in (hacky), lots of complexities i'm skimming over
 
     var currHeight = 300;
@@ -138,6 +140,7 @@
       currentWordText.setText(currentWord);
       return;
     }
+    plurals.add(currentWord + "s");
     var bonus = calculateScore(currentWord);
     score += bonus;
     scoreText.setText("score: " + score);
@@ -156,8 +159,8 @@
        bonusImage = context.add.sprite(700, 300, 'excellent');
        bonusImage.alpha = 0.9;
     }
-    else if (bonus > 6) {
-       bonusImage = context.add.sprite(700, 300, 'excellent');
+    else if (bonus > 4) {
+       bonusImage = context.add.sprite(700, 300, 'nice');
        bonusImage.alpha = 0.9;
     }
     for(i = 0; i < currentSquares.length; i++) {
@@ -165,14 +168,14 @@
       currentSquares[i].destroy();
     }
     currentSquares = [];
-    await sleep(1000);
-    bonusImage.destroy();
-
-
+    if(bonusImage) {
+      await sleep(1000);
+      bonusImage.destroy(); 
+    }
   }
 
   function validWord(currentWord) {
-    if(validWords.has(currentWord)) {
+    if(!validWords.has(currentWord)) {
       return "invalid word!";
     }
     if(plurals.has(currentWord)) {
@@ -185,7 +188,7 @@
     if(squareToLocation.has(currentSquares[i])){
       const loc = squareToLocation.get(currentSquares[i]);
       if(rearranging && loc.width != dimensions.width) {
-        return "only choose one word!"
+        return "must use all letters!"
       }
       if(!rearranging) {
         rearranging = true;
