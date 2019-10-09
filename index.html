@@ -17,12 +17,10 @@
     // demo 2: rat + star + rackets
     var letterBag = ["r", "t", "a", "s", "k", "a", "e", "c"];
     var pos = 0; // no queue in JS apparently so just use this
- 
-    var usedWords = new Set([]); // you can have repeats so not quite
-    // put "s" in (hacky), lots of complexities i'm skimming over
 
-    // shake
-    // var shakeCamera;
+    var validWords = new Set(["rat", "art", "tar", "star", "rackets", "cake", "cakes"]);
+    var plurals = new Set(["rats"]); // doesn't actually work because each word needs its own memory
+    // put "s" in (hacky), lots of complexities i'm skimming over
 
     var currHeight = 300;
     var left = true;
@@ -39,6 +37,8 @@
         // update: update,
       }
     };
+
+    var context;
 
     var game = new Phaser.Game(config);
     var squares = [];
@@ -64,6 +64,7 @@
 
    function create ()
    {
+    context = this;
     camera = this.cameras.main;
     currentWordText = this.add.text(700, 650, "", { font: "70px Karla", fill: '#000000' });
     currentWordText.setOrigin(0.5);
@@ -116,13 +117,32 @@
 
   }
 
-  function submitWord() {
-    // if(!validWord) {
+  async function submitWord() {
+    if(currentWord.length < 3) return;
+          console.log(currentWord);
+
+    const errorMessage = validWord(currentWord);
+    if(errorMessage != "") {
       camera.shake(700, 0.003);
-      currentWord = "";
       currentSquares = [];
+      currentWordText.setText(errorMessage);
+      await sleep(1000);
+      currentWord = "";
       currentWordText.setText(currentWord);
-    // }
+      return;
+    }
+    addWord(context, currentWord);
+    currentWord = "";
+    currentWordText.setText(currentWord);
+    currentSquares = [];
+}
+
+function validWord(currentWord) {
+  if(plurals.has(currentWord)) {
+    console.log("has");
+    return "no plurals!";
+  }
+  return "";
 }
 
   function deleteLetter() {
@@ -363,9 +383,9 @@
   //   return true;
   // }
 
-  // function sleep(ms) {
-  //   return new Promise(resolve => setTimeout(resolve, ms));
-  // }
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
        // function update() {
         //console.log('hi');
